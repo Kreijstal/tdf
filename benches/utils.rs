@@ -7,13 +7,13 @@ use ratatui::layout::Rect;
 use ratatui_image::picker::{Picker, ProtocolType};
 use tdf::{
 	converter::{run_conversion_loop, ConvertedPage, ConverterMsg},
-	renderer::{fill_default, start_rendering, RenderError, RenderInfo, RenderNotif}
+	renderer::{fill_default, start_rendering, RenderError, RenderInfo, RenderNotif},
 };
 
 pub fn handle_renderer_msg(
 	msg: Result<RenderInfo, RenderError>,
 	pages: &mut Vec<Option<ConvertedPage>>,
-	to_converter_tx: &mut Sender<tdf::converter::ConverterMsg>
+	to_converter_tx: &mut Sender<tdf::converter::ConverterMsg>,
 ) {
 	match msg {
 		Ok(RenderInfo::NumPages(num)) => {
@@ -21,14 +21,14 @@ pub fn handle_renderer_msg(
 			to_converter_tx.send(ConverterMsg::NumPages(num)).unwrap();
 		}
 		Ok(RenderInfo::Page(info)) => to_converter_tx.send(ConverterMsg::AddImg(info)).unwrap(),
-		Err(e) => panic!("Got error from renderer: {e:?}")
+		Err(e) => panic!("Got error from renderer: {e:?}"),
 	}
 }
 
 pub fn handle_converter_msg(
 	msg: Result<ConvertedPage, RenderError>,
 	pages: &mut [Option<ConvertedPage>],
-	to_converter_tx: &mut Sender<ConverterMsg>
+	to_converter_tx: &mut Sender<ConverterMsg>,
 ) {
 	let page = msg.expect("Got error from converter");
 	let num = page.num;
@@ -49,16 +49,16 @@ pub struct RenderState {
 	pub from_converter_rx: RecvStream<'static, Result<ConvertedPage, RenderError>>,
 	pub pages: Vec<Option<ConvertedPage>>,
 	pub to_converter_tx: Sender<ConverterMsg>,
-	pub to_render_tx: Sender<RenderNotif>
+	pub to_render_tx: Sender<RenderNotif>,
 }
 
 const FONT_SIZE: (u16, u16) = (8, 14);
 
 pub fn start_rendering_loop(
-	path: impl AsRef<Path>
+	path: impl AsRef<Path>,
 ) -> (
 	RecvStream<'static, Result<RenderInfo, RenderError>>,
-	Sender<RenderNotif>
+	Sender<RenderNotif>,
 ) {
 	let pathbuf = path.as_ref().canonicalize().unwrap();
 	let str_path = format!("file://{}", pathbuf.into_os_string().to_string_lossy());
@@ -72,7 +72,7 @@ pub fn start_rendering_loop(
 		columns,
 		rows,
 		height: rows * FONT_SIZE.1,
-		width: columns * FONT_SIZE.0
+		width: columns * FONT_SIZE.0,
 	};
 
 	std::thread::spawn(move || start_rendering(&str_path, to_main_tx, from_main_rx, size));
@@ -81,7 +81,7 @@ pub fn start_rendering_loop(
 		x: 0,
 		y: 0,
 		width: columns - 2,
-		height: rows - 6
+		height: rows - 6,
 	};
 	to_render_tx.send(RenderNotif::Area(main_area)).unwrap();
 
@@ -90,10 +90,10 @@ pub fn start_rendering_loop(
 }
 
 pub fn start_converting_loop(
-	prerender: usize
+	prerender: usize,
 ) -> (
 	RecvStream<'static, Result<ConvertedPage, RenderError>>,
-	Sender<ConverterMsg>
+	Sender<ConverterMsg>,
 ) {
 	let (to_converter_tx, from_main_rx) = unbounded();
 	let (to_main_tx, from_converter_rx) = unbounded();
@@ -105,7 +105,7 @@ pub fn start_converting_loop(
 		to_main_tx,
 		from_main_rx,
 		picker,
-		prerender
+		prerender,
 	));
 
 	let from_converter_rx = from_converter_rx.into_stream();
@@ -123,7 +123,7 @@ pub fn start_all_rendering(path: impl AsRef<Path>) -> RenderState {
 		from_converter_rx,
 		pages,
 		to_converter_tx,
-		to_render_tx
+		to_render_tx,
 	}
 }
 
@@ -133,7 +133,7 @@ pub async fn render_doc(path: impl AsRef<Path>) {
 		mut from_converter_rx,
 		mut pages,
 		mut to_converter_tx,
-		to_render_tx
+		to_render_tx,
 	} = start_all_rendering(path);
 
 	while pages.is_empty() || pages.iter().any(Option::is_none) {

@@ -3,24 +3,24 @@ mod utils;
 use std::{
 	hint::black_box,
 	path::Path,
-	time::{SystemTime, UNIX_EPOCH}
+	time::{SystemTime, UNIX_EPOCH},
 };
 
 use criterion::{criterion_group, criterion_main, profiler::Profiler, BenchmarkId, Criterion};
 use futures_util::StreamExt;
 use tdf::{
 	converter::{ConvertedPage, ConverterMsg},
-	renderer::{fill_default, PageInfo, RenderInfo}
+	renderer::{fill_default, PageInfo, RenderInfo},
 };
 use utils::{
 	handle_converter_msg, handle_renderer_msg, render_doc, start_all_rendering,
-	start_converting_loop, start_rendering_loop, RenderState
+	start_converting_loop, start_rendering_loop, RenderState,
 };
 
 const FILES: [&str; 3] = [
 	"benches/adobe_example.pdf",
 	"benches/example_dictionary.pdf",
-	"benches/geotopo.pdf"
+	"benches/geotopo.pdf",
 ];
 
 fn render_full(c: &mut Criterion) {
@@ -40,7 +40,7 @@ fn render_to_first_page(c: &mut Criterion) {
 			|b, &file| {
 				b.to_async(tokio::runtime::Runtime::new().unwrap())
 					.iter(|| render_first_page(file))
-			}
+			},
 		);
 	}
 }
@@ -56,7 +56,7 @@ fn only_converting(c: &mut Criterion) {
 			|b, (rendered, _)| {
 				b.to_async(tokio::runtime::Runtime::new().unwrap())
 					.iter_with_setup(|| rendered.clone(), convert_all_files)
-			}
+			},
 		);
 	}
 }
@@ -67,7 +67,7 @@ pub async fn render_first_page(path: impl AsRef<Path>) {
 		mut from_converter_rx,
 		mut pages,
 		mut to_converter_tx,
-		to_render_tx
+		to_render_tx,
 	} = start_all_rendering(path);
 
 	// we only want to render until the first page is ready to be printed

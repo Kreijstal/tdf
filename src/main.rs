@@ -1,7 +1,7 @@
 use std::{
 	io::{stdout, Read, Write},
 	num::NonZeroUsize,
-	path::PathBuf
+	path::PathBuf,
 };
 
 use converter::{run_conversion_loop, ConvertedPage, ConverterMsg};
@@ -9,8 +9,8 @@ use crossterm::{
 	execute,
 	terminal::{
 		disable_raw_mode, enable_raw_mode, window_size, EndSynchronizedUpdate,
-		EnterAlternateScreen, LeaveAlternateScreen
-	}
+		EnterAlternateScreen, LeaveAlternateScreen,
+	},
 };
 use futures_util::{stream::StreamExt, FutureExt};
 use glib::{LogField, LogLevel, LogWriterOutput};
@@ -71,6 +71,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	// poppler stuff instead of a rust string?
 	let file_path = format!("file://{}", path.clone().into_os_string().to_string_lossy());
 
+	#[cfg(target_os = "windows")]
+	let mut window_size = crossterm::terminal::WindowSize {
+		height: 0,
+		width: 0,
+		columns: 120,
+		rows: 80,
+	};
+	#[cfg(not(target_os = "windows"))]
 	let mut window_size = window_size()?;
 
 	if window_size.width == 0 || window_size.height == 0 {
@@ -123,7 +131,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	// We need to create `picker` on this thread because if we create it on the `renderer` thread,
 	// it messes up something with user input. Input never makes it to the crossterm thing
-    let picker = Picker::from_query_stdio()?;
+	let picker = Picker::from_query_stdio()?;
 
 	// then we want to spawn off the rendering task
 	// We need to use the thread::spawn API so that this exists in a thread not owned by tokio,
@@ -141,7 +149,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	let file_name = path.file_name().map_or_else(
 		|| "Unknown file".into(),
-		|n| n.to_string_lossy().to_string()
+		|n| n.to_string_lossy().to_string(),
 	);
 	let mut tui = tui::Tui::new(file_name, flags.max_wide, flags.r_to_l.unwrap_or_default());
 
@@ -243,7 +251,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn on_notify_ev(
 	to_tui_tx: flume::Sender<Result<RenderInfo, RenderError>>,
-	to_render_tx: flume::Sender<RenderNotif>
+	to_render_tx: flume::Sender<RenderNotif>,
 ) -> impl Fn(notify::Result<Event>) {
 	move |res| match res {
 		// If we get an error here, and then an error sending, everything's going wrong. Just give
@@ -253,14 +261,16 @@ fn on_notify_ev(
 		// process know that too? Or should that be
 		Ok(ev) => match ev.kind {
 			EventKind::Access(_) => (),
-			EventKind::Remove(_) =>
-				drop(to_tui_tx.send(Err(RenderError::Render("File was deleted".into())))),
+			EventKind::Remove(_) => {
+				drop(to_tui_tx.send(Err(RenderError::Render("File was deleted".into()))))
+			}
 			// This shouldn't fail to send unless the receiver gets disconnected. If that's
 			// happened, then like the main thread has panicked or something, so it doesn't matter
 			// we don't handle the error here.
-			EventKind::Other | EventKind::Any | EventKind::Create(_) | EventKind::Modify(_) =>
-				drop(to_render_tx.send(renderer::RenderNotif::Reload)),
-		}
+			EventKind::Other | EventKind::Any | EventKind::Create(_) | EventKind::Modify(_) => {
+				drop(to_render_tx.send(renderer::RenderNotif::Reload))
+			}
+		},
 	}
 }
 

@@ -1,7 +1,7 @@
 use ratatui::widgets::Widget;
 
 pub struct Skip {
-	skip: bool
+	skip: bool,
 }
 
 impl Skip {

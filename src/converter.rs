@@ -9,20 +9,20 @@ use crate::renderer::{fill_default, PageInfo, RenderError};
 pub struct ConvertedPage {
 	pub page: Protocol,
 	pub num: usize,
-	pub num_results: usize
+	pub num_results: usize,
 }
 
 pub enum ConverterMsg {
 	NumPages(usize),
 	GoToPage(usize),
-	AddImg(PageInfo)
+	AddImg(PageInfo),
 }
 
 pub async fn run_conversion_loop(
 	sender: Sender<Result<ConvertedPage, RenderError>>,
 	receiver: Receiver<ConverterMsg>,
 	mut picker: Picker,
-	prerender: usize
+	prerender: usize,
 ) -> Result<(), SendError<Result<ConvertedPage, RenderError>>> {
 	let mut images = vec![];
 	let mut page: usize = 0;
@@ -32,7 +32,7 @@ pub async fn run_conversion_loop(
 		picker: &mut Picker,
 		page: usize,
 		iteration: &mut usize,
-		prerender: usize
+		prerender: usize,
 	) -> Result<Option<ConvertedPage>, RenderError> {
 		if images.is_empty() || *iteration >= prerender {
 			return Ok(None);
@@ -80,7 +80,7 @@ pub async fn run_conversion_loop(
 		Ok(Some(ConvertedPage {
 			page: txt_img,
 			num: page_info.page,
-			num_results: page_info.search_results
+			num_results: page_info.search_results,
 		}))
 	}
 
@@ -94,7 +94,7 @@ pub async fn run_conversion_loop(
 				fill_default(images, n_pages);
 				*page = (*page).min(n_pages - 1);
 			}
-			ConverterMsg::GoToPage(new_page) => *page = new_page
+			ConverterMsg::GoToPage(new_page) => *page = new_page,
 		}
 	}
 
@@ -108,13 +108,13 @@ pub async fn run_conversion_loop(
 				}
 				Err(TryRecvError::Empty) => (),
 				// if it's disconnected, we're done. just return.
-				Err(TryRecvError::Disconnected) => return Ok(())
+				Err(TryRecvError::Disconnected) => return Ok(()),
 			}
 
 			match next_page(&mut images, &mut picker, page, &mut iteration, prerender) {
 				Ok(None) => break,
 				Ok(Some(img)) => sender.send(Ok(img))?,
-				Err(e) => sender.send(Err(e))?
+				Err(e) => sender.send(Err(e))?,
 			}
 		}
 

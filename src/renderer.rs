@@ -11,7 +11,7 @@ pub enum RenderNotif {
 	Area(Rect),
 	JumpToPage(usize),
 	Search(String),
-	Reload
+	Reload,
 }
 
 #[derive(Debug)]
@@ -20,31 +20,31 @@ pub enum RenderError {
 	Doc(glib::Error),
 	// Don't like storing an error as a string but it needs to be Send to send to the main thread,
 	// and it's just going to be shown to the user, so whatever
-	Render(String)
+	Render(String),
 }
 
 pub enum RenderInfo {
 	NumPages(usize),
-	Page(PageInfo)
+	Page(PageInfo),
 }
 
 #[derive(Clone)]
 pub struct PageInfo {
 	pub img_data: ImageData,
 	pub page: usize,
-	pub search_results: usize
+	pub search_results: usize,
 }
 
 #[derive(Clone)]
 pub struct ImageData {
 	pub data: Vec<u8>,
-	pub area: Rect
+	pub area: Rect,
 }
 
 #[derive(Default)]
 struct PrevRender {
 	successful: bool,
-	contained_term: Option<bool>
+	contained_term: Option<bool>,
 }
 
 pub fn fill_default<T: Default>(vec: &mut Vec<T>, size: usize) {
@@ -72,7 +72,7 @@ pub fn start_rendering(
 	path: &str,
 	mut sender: Sender<Result<RenderInfo, RenderError>>,
 	receiver: Receiver<RenderNotif>,
-	size: WindowSize
+	size: WindowSize,
 ) -> Result<(), SendError<Result<RenderInfo, RenderError>>> {
 	// first, wait 'til we get told what the current starting area is so that we can set it to
 	// know what to render to
@@ -110,7 +110,7 @@ pub fn start_rendering(
 				// done, so we're fine to just return
 				return Ok(());
 			}
-			Ok(d) => d
+			Ok(d) => d,
 		};
 
 		let n_pages = doc.n_pages() as usize;
@@ -190,7 +190,7 @@ pub fn start_rendering(
 					left.iter_mut()
 						.rev()
 						.enumerate()
-						.map(|(idx, p)| (start_point - (idx + 1), p))
+						.map(|(idx, p)| (start_point - (idx + 1), p)),
 				);
 
 			let area_w = f64::from(area.width) * f64::from(col_w);
@@ -213,7 +213,7 @@ pub fn start_rendering(
 					// If it's disconnected, then the main loop is done, so we should just give up
 					Err(TryRecvError::Disconnected) => return Ok(()),
 					Ok(notif) => handle_notif!(notif),
-					Err(TryRecvError::Empty) => ()
+					Err(TryRecvError::Empty) => (),
 				};
 
 				// We know this is in range 'cause we're iterating over it but we still just want
@@ -234,7 +234,7 @@ pub fn start_rendering(
 					&page,
 					search_term.as_deref(),
 					rendered_with_no_results,
-					(area_w, area_h)
+					(area_w, area_h),
 				) {
 					// If we've already rendered it just fine and we don't need to render it again,
 					// just continue. We're all good
@@ -264,7 +264,7 @@ pub fn start_rendering(
 						}
 					}
 					// And if we got an error, then obviously we need to propagate that
-					Err(e) => sender.send(Err(RenderError::Render(e)))?
+					Err(e) => sender.send(Err(RenderError::Render(e)))?,
 				}
 			}
 
@@ -286,7 +286,7 @@ struct RenderedContext {
 	surface: Surface,
 	num_results: usize,
 	surface_width: f64,
-	surface_height: f64
+	surface_height: f64,
 }
 
 /// SAFETY: I think this is safe because, although the backing struct for `Surface` does contain
@@ -305,7 +305,7 @@ fn render_single_page_to_ctx(
 	page: &Page,
 	search_term: Option<&str>,
 	already_rendered_no_results: bool,
-	(area_w, area_h): (f64, f64)
+	(area_w, area_h): (f64, f64),
 ) -> Result<Option<RenderedContext>, String> {
 	let mut result_rects = search_term
 		.as_ref()
@@ -355,7 +355,7 @@ fn render_single_page_to_ctx(
 		// by that same amount, then it'll still fit perfectly into the context, but be
 		// rendered at higher quality.
 		surface_width as i32,
-		surface_height as i32
+		surface_height as i32,
 	)
 	.map_err(|e| format!("Couldn't create ImageSurface: {e}"))?;
 	surface.set_device_scale(scale_factor, scale_factor);
@@ -391,7 +391,7 @@ fn render_single_page_to_ctx(
 				&mut old_rect,
 				SelectionStyle::Glyph,
 				&mut Color::new(),
-				&mut highlight_color
+				&mut highlight_color,
 			);
 		}
 	}
@@ -400,7 +400,7 @@ fn render_single_page_to_ctx(
 		surface: ctx.target(),
 		num_results,
 		surface_width,
-		surface_height
+		surface_height,
 	}))
 }
 
@@ -408,7 +408,7 @@ fn render_ctx_to_png(
 	ctx: &RenderedContext,
 	sender: &mut Sender<Result<RenderInfo, RenderError>>,
 	(col_w, col_h): (u16, u16),
-	page: usize
+	page: usize,
 ) -> Result<(), SendError<Result<RenderInfo, RenderError>>> {
 	let mut img_data = Vec::with_capacity((ctx.surface_height * ctx.surface_width) as usize);
 
@@ -423,11 +423,11 @@ fn render_ctx_to_png(
 					width: ctx.surface_width as u16 / col_w,
 					height: ctx.surface_height as u16 / col_h,
 					x: 0,
-					y: 0
-				}
+					y: 0,
+				},
 			},
 			page,
-			search_results: ctx.num_results
-		})))
+			search_results: ctx.num_results,
+		}))),
 	}
 }
